@@ -2,6 +2,7 @@ import os
 import re
 import time
 import shelve
+import modules.config as conf
 
 # Sets up custom month dictionary
 months = {
