@@ -3,6 +3,7 @@ import re
 import time
 import shelve
 import modules.config as conf
+import modules.testplan as tplan
 
 # Sets up custom month dictionary
 months = {
