@@ -1,5 +1,4 @@
 import os
-import re
 import time
 import shelve
 import modules.config as conf
@@ -90,83 +89,36 @@ while True:
         print("A value that you typed in is not valid, please try again.")
         print(e)
 
-# Compiles regex to capture individual tables
-# \|\ \|\s+(\w+)\s+\((\w+)\)\s+-\s+([\S\ ]+)\s+-+\s+((?:[\S\ ]+\r?\n)+)
-getTables = re.compile(r'''
-    \|\ \|\s+           #Matches two pipes separated by a space followed by one or more whitespaces
-    (\w+)               #Captures the Table Name (group(1))
-    \s+\(               #Matches one or more whitespaces followed by an open parentheses
-    (\w+)               #Captures the Category (group(2))
-    \)\s+-\s+           #Matches the end parentheses followed one or more whitespaces, a single dash,
-                        #and one or more whitespaces
-    ([\S\ ]+)           #Captures the Column Names (group(3)) by matching one or more space or non-whitespace
-    \s+-+\s+            #Matches one or more whitespaces, one or more dashes, and then one or more whitespaces
-    ((?:[\S\ ]+\r?\n)+) #Captures the Data (group(4)) comprised of one or more groups matching one or more
-                        #spaces or non-whitespaces followed by an optional carriage return and a newline
-''', re.VERBOSE)
-
 # Searches the doc with regex for tables
-tables = getTables.finditer(testPlanRead)
+tables = tplan.getTables(testPlanRead)
 
 # Sets up the number of times a table wasn't found
 didntFind = []
 
 for table in tables:
 
-    # Splits the data rows allowing for both windows and unix linebreaks, slices off the blank cell at end.
-    dataRows = re.split(r'\r?\n', table.group(4))[0:-1]
-
-    # Strips out whitespace from the ends and splits the data by the pipe delimiter
-    # Then counts the number of nonempty cells in each and saves the longest
-    strippedRows = []
-    rowCounts = []
-    for dataRow in dataRows:
-        strippedRow = dataRow.strip()
-        dataCells = strippedRow.split('|')
-
-        count = 0
-        for dataCell in dataCells:
-            if dataCell:
-                count += 1
-
-        rowCounts.append(count)
-        strippedRows.append(dataCells)
-
-    # Uses the row counts to find the index with the highest number of nonempty cells
-    biggestRow = rowCounts.index(max(rowCounts))
-
-    # Splits columns
-    columns = table.group(3).split('|')
-
-    # Makes a dictionary for each table
-    tableDict = {
-        'Name': table.group(1),
-        'Category': table.group(2),
-        'Columns': columns,
-        'Rows': strippedRows,
-        'Biggest Row': strippedRows[biggestRow],
-    }
+    tbl = tplan.Table(table.group(1), table.group(2), table.group(3), table.group(4))
 
     # Prints Biggest Row to terminal, table by table
-    print(tableDict['Name'] + " (" + tableDict['Category'] + ")")
-    for i in range(len(columns)):
-        print(tableDict['Columns'][i] + ": " + tableDict['Biggest Row'][i])
+    print(tbl.name + " (" + tbl.category + ")")
+    for i in range(len(tbl.columns)):
+        print(tbl.columns[i] + ": " + tbl.rows[tbl.longestRow()][i])
 
     response = raw_input("Press enter to continue. 'N' for did not find. 'M' for more from same table.\n")
 
     if response.upper() == 'M':
-        print(tableDict['Columns'])
-        for i in range(len(tableDict['Rows'])):
-            print(tableDict['Rows'][i])
+        print(tbl.columns)
+        for i in range(len(tbl.rows)):
+            print(tbl.rows[i])
         response = raw_input("Press enter to continue. 'N' for did not find.\n")
 
     if response.upper() != 'N':
-        testPlanRead = testPlanRead.replace("| | " + tableDict['Name'], "|x| " + tableDict['Name'])
+        testPlanRead = testPlanRead.replace("| | " + tbl.name, "|x| " + tbl.name)
     else:
-        didntFind.append(tableDict['Name'])
+        didntFind.append(tbl.name)
 
     # Adds dictionary to a list
-    dataFile[table.group(1)] = tableDict
+    dataFile[tbl.name] = tbl
 
 if not didntFind:
     if "Completed _________________________ by _____________________" in testPlanRead:
