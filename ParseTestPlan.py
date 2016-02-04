@@ -4,6 +4,12 @@ import shelve
 import modules.config as conf
 import modules.testplan as tplan
 
+# TODO: Add a progress bar somehow depanding on how far someone is through the test plan
+# TODO: Add image rec code to at least copy the niin if there is one, find the right tab, and copy it into the niin field
+# TODO: Add an escape key
+# TODO: Possibly copy search terms to clipboard?
+# TODO: Be able to open niinja test plans
+
 # Sets up custom month dictionary
 months = {
     1: "JAN",
@@ -26,6 +32,11 @@ while True:
         # Asks user for input for testplan location
         path = raw_input("Please enter PATH(defaults to current directory): ")
         month = raw_input("Please enter MONTHNUMBER(defaults to next month): ")
+        testPlanType = raw_input("Please specify testplan type: (F Fedlog/S Flissearch): ")
+        if testPlanType.upper() == 'S':
+            testPlanType = "FLISSEARCH"
+        else:
+            testPlanType = "FEDLOG"
 
         currentMonth = int(time.strftime("%m"))
         currentYear = int(time.strftime("%Y"))
@@ -47,27 +58,29 @@ while True:
 
         print(
             "Looking for TestPlan: " + os.path.abspath(path) + os.sep +
-            "FEDLOG TestPlan - " + months[int(month)] + " " + str(year) + ".log\n"
+            testPlanType + " TestPlan - " + months[int(month)] + " " + str(year) + ".log\n"
         )
 
         # Opens testplan and copies
         testPlan = open(
-            os.path.abspath(path) + os.sep + "FEDLOG TestPlan - " + months[int(month)] + " " + str(year) + ".log", "r"
+            os.path.abspath(path) + os.sep + testPlanType + " TestPlan - " + months[int(month)] + " " + str(
+                year) + ".log", "r"
         )
         testPlanRead = testPlan.read()
 
         # Checks to see if original testplan has been made yet, if not creates it
-        if not os.path.exists(os.path.abspath(path) + os.sep + "FEDLOG TestPlan - " + months[int(month)] + " " + str(
+        if not os.path.exists(os.path.abspath(path) + os.sep + testPlanType + " TestPlan - " + months[
+            int(month)] + " " + str(
                 year) + "-Original.log"):
             originalTestPlan = open(
-                os.path.abspath(path) + os.sep + "FEDLOG TestPlan - " + months[int(month)] + " " + str(
+                os.path.abspath(path) + os.sep + testPlanType + " TestPlan - " + months[int(month)] + " " + str(
                     year) + "-Original.log", "w"
             )
             originalTestPlan.write(testPlanRead)
             originalTestPlan.close()
 
         testPlan.close()
-        testPlan = open(path + "FEDLOG TestPlan - " + months[int(month)] + " " + str(year) + ".log", "w")
+        testPlan = open(path + testPlanType + " TestPlan - " + months[int(month)] + " " + str(year) + ".log", "w")
 
         # Makes the generated directory
         if not os.path.exists(os.path.abspath(path) + os.sep + "Generated"):
@@ -91,11 +104,17 @@ while True:
 
 # Searches the doc with regex for tables
 tables = tplan.getTables(testPlanRead)
+ltables = list(tables)
+length = len(ltables)
+num = 0
 
 # Sets up the number of times a table wasn't found
 didntFind = []
 
-for table in tables:
+for table in ltables:
+    num += 1
+    print("Table " + str(num) + " of " + str(length))
+
 
     tbl = tplan.Table(table.group(1), table.group(2), table.group(3), table.group(4))
 
